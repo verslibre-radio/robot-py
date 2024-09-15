@@ -10,7 +10,7 @@ from pydub import AudioSegment
 from pydub.silence import detect_leading_silence
 from pathlib import Path
 from pydub import AudioSegment
-from utils import get_filename, get_metadata, add_metadata_to_mp3
+from mixing.utils import get_filename, get_metadata, add_metadata_to_mp3
 
 SHEET_ID="1j2w0MPDL0R9Z_9XE5G_luDo4PgPEWhf6RNhwbxh7lmw"
 SHEET_NAME="meta"                                                                                                                                  
