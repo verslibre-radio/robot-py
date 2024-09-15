@@ -2,11 +2,11 @@ import eyed3
 
 def get_metadata(metadata_df):
     show_data=metadata_df[['show_name','dj_name','show_nr','tags-0-tag']].dropna(axis=1, how='all').to_dict('records')
-    show_data=show_data[0]
-    show_name=show_data['show_name']
-    dj_name=show_data['dj_name']
-    ep_nr=show_data['show_nr']
-    genre=show_data['tags-0-tag']
+    show_data = show_data[0]
+    show_name = show_data['show_name']
+    dj_name = show_data['dj_name']
+    ep_nr = show_data['show_nr']
+    genre = show_data['tags-0-tag']
     return show_name, dj_name, ep_nr, genre
 
 def get_filename(tag, show_name, dj_name, ep_nr, date):

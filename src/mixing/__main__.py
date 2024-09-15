@@ -4,17 +4,18 @@ import argparse
 import pandas as pd
 import gspread
 
+from datetime import datetime
 from loguru import logger
 from pydub import AudioSegment
 from pydub.silence import detect_leading_silence
 from pathlib import Path
 from pydub import AudioSegment
-from utils import get_filename, get_metadata
+from utils import get_filename, get_metadata, add_metadata_to_mp3
 
 SHEET_ID="1j2w0MPDL0R9Z_9XE5G_luDo4PgPEWhf6RNhwbxh7lmw"
 SHEET_NAME="meta"                                                                                                                                  
 
-def trim_sound(src_audio_path, src_audio_filename, dst_audio_path, dst_audio_filename) -> None:  
+def trim_sound(src_audio_path, src_audio_filename, dst_audio_path, dst_audio_filename) -> str:  
     dst_path = Path(dst_audio_path) / Path(dst_audio_filename)
     src_path = Path(src_audio_path) / Path(src_audio_filename)
     try:
@@ -34,6 +35,8 @@ def trim_sound(src_audio_path, src_audio_filename, dst_audio_path, dst_audio_fil
 
     os.remove(src_path)
 
+    return str(dst_path)
+
 def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None:
     source_file_list = [f for f in os.listdir(src_audio_path) if not f.startswith('.')]
     if len(source_file_list) == 0:
@@ -49,7 +52,10 @@ def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None
             show_name, dj_name, ep_nr, genre = get_metadata(df_active)
             dst_audio_filename = get_filename(tag, show_name, dj_name, ep_nr, date)
 
-            trim_sound(src_audio_path, file_name, dst_audio_path, dst_audio_filename)
+            dst_path = trim_sound(src_audio_path, file_name, dst_audio_path, dst_audio_filename)
+
+            date_rec = datetime.strptime(dst_audio_filename.split('_',2)[0], '%Y%m%d')
+            add_metadata_to_mp3(dst_path, show_name, dj_name, ep_nr, genre, date_rec.year)
 
         logger.info("Finished trimming stage")
 
