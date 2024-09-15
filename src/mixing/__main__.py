@@ -1,48 +1,45 @@
 import shutil
 import os
+import argparse
 import pandas as pd
+import gspread
 
 from loguru import logger
 from pydub import AudioSegment
 from pydub.silence import detect_leading_silence
-from datetime import datetime
-from mixcloud.config import folderid_profiles,local_temp, local_base_path, local_upload, drive
-from mixcloud.utils import get_metadata, get_filename
-
 from pathlib import Path
 from pydub import AudioSegment
+from utils import get_filename, get_metadata
 
-def trim_sound(file_name,filepath,tmp_path, filename_archive):  
-    new_name = f"{filename_archive}.mp3"
-    new_path = f"{filepath}{new_name}"
-    file_path = f"{tmp_path}{file_name}"
+SHEET_ID="1j2w0MPDL0R9Z_9XE5G_luDo4PgPEWhf6RNhwbxh7lmw"
+SHEET_NAME="meta"                                                                                                                                  
+
+def trim_sound(src_audio_path, src_audio_filename, dst_audio_path, dst_audio_filename) -> None:  
+    dst_path = Path(dst_audio_path) / Path(dst_audio_filename)
+    src_path = Path(src_audio_path) / Path(src_audio_filename)
     try:
         trim_leading_silence: AudioSegment = lambda x: x[detect_leading_silence(x) :]
         trim_trailing_silence: AudioSegment = lambda x: trim_leading_silence(x.reverse()).reverse()
         strip_silence: AudioSegment = lambda x: trim_trailing_silence(trim_leading_silence(x))
-        sound = AudioSegment.from_file(file_path)
+        sound = AudioSegment.from_file(src_path)
         stripped = strip_silence(sound)
         out = stripped.fade_in(3000).fade_out(3000)
-        out.export(new_path, format="mp3", bitrate="320k")
+        out.export(dst_path, format="mp3", bitrate="320k")
     except Exception as e:
-        logger.info(f"FAILED: Trim and fade in/out for: {file_name}")
+        logger.info(f"FAILED: Trim and fade in/out for: {src_audio_filename}")
         logger.error(e)
-        shutil.copyfile(file_path, new_path)
+        shutil.copyfile(src_path, dst_path)
     else:
-        logger.info(f"PASSED: Trim and fade in/out for: {file_name}")
+        logger.info(f"PASSED: Trim and fade in/out for: {src_audio_filename}")
 
-    os.remove(f'{local_base_path}/tmp/{file_name}')
-    return new_path
+    os.remove(src_path)
 
-def trimming(df):
-    file_list=[f for f in os.listdir(local_temp) if not f.startswith('.')]
-    upload_file_list=[f for f in os.listdir(local_upload) if not f.startswith('.')]
-    file_list_profiles = drive.ListFile({'q': f"parents = '{folderid_profiles}'"}).GetList()
-
-    if len(file_list) == 0:
-        logger.info(f"No files to trim")
+def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None:
+    source_file_list = [f for f in os.listdir(src_audio_path) if not f.startswith('.')]
+    if len(source_file_list) == 0:
+        logger.info(f"No files to trim, exiting")
     else:
-        for file_name in file_list:
+        for file_name in source_file_list:
             logger.info(f"Starting trimming sound for {file_name}")
 
             tag = file_name.split('-',2)[1]
@@ -50,15 +47,41 @@ def trimming(df):
 
             df_active=df[df["tag"]==tag]
             show_name, dj_name, ep_nr, genre = get_metadata(df_active)
-            filename_archive = get_filename(tag, show_name, dj_name, ep_nr, date)
+            dst_audio_filename = get_filename(tag, show_name, dj_name, ep_nr, date)
 
-            trim_sound(file_name, local_upload,local_temp, filename_archive)
+            trim_sound(src_audio_path, file_name, dst_audio_path, dst_audio_filename)
 
-    logger.info(f"Finished trimming stage")
-    return file_list_profiles
+        logger.info("Finished trimming stage")
+
+def get_sheet(cred_path: str) -> pd.DataFrame:
+    gc = gspread.service_account(filename=cred_path)
+    spreadsheet = gc.open_by_key(SHEET_ID)
+    worksheet = spreadsheet.worksheet(SHEET_NAME)
+    rows = worksheet.get_all_records()
+    df = pd.DataFrame.from_dict(rows)
+
+    return df
 
 def main():
-    logger.info("test")
+    parser = argparse.ArgumentParser(description='Program to trim dead audio and add fades')
+    parser.add_argument(
+        'path',
+        default = "/var/lib/robot",
+        help = "Path to local root folder used for storing audio"
+    )
+    parser.add_argument(
+        'credentials',
+        default = "/etc/robot/cred.json",
+        help = "Path to credentials file"
+    )
+
+    args = parser.parse_args()
+    df = get_sheet(args.credentials)
+    src_audio_path = Path(args.path) / "to_mix" 
+    dst_audio_path = Path(args.path) / "to_upload" 
+    dst_audio_path.mkdir(parents=True, exist_ok=True)
+
+    trimming(df, str(src_audio_path), str(dst_audio_path))
 
 if __name__ == "__main__":
     main()

@@ -2,13 +2,16 @@
 name = "robot-py"
 version = "0.1.0"
 description = "Program to trim dead sound and add fades"
-authors = ["Your Name <you@example.com>"]
+authors = ["Morten Slingsby <morten@verslib.re>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
 loguru = "^0.7.2"
 pydub = "^0.25.1"
+pandas = "^2.2.2"
+gspread = "^6.1.2"
+eyed3 = "^0.9.7"
 
 
 [build-system]
