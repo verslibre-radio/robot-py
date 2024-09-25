@@ -16,7 +16,10 @@ def get_filename(tag, show_name, dj_name, ep_nr, date):
 def add_metadata_to_mp3(file_path, show_name, dj_name, ep_nr, genre, date, year):
     # Load the MP3 file
     audiofile = eyed3.load(file_path)
-    
+
+    if dj_name == "" or dj_name == None:
+        dj_name = show_name
+
     # Set metadata
     audiofile.tag.artist = dj_name
     audiofile.tag.title = f"{date}_{show_name}"
