@@ -55,7 +55,7 @@ def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None
             dst_path = trim_sound(src_audio_path, file_name, dst_audio_path, dst_audio_filename)
 
             date_rec = datetime.strptime(dst_audio_filename.split('_',2)[0], '%Y%m%d')
-            add_metadata_to_mp3(dst_path, show_name, dj_name, ep_nr, genre, date_rec.year)
+            add_metadata_to_mp3(dst_path, show_name, dj_name, ep_nr, genre, date, date_rec.year)
 
         logger.info("Finished trimming stage")
 
