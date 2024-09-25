@@ -71,12 +71,12 @@ def get_sheet(cred_path: str) -> pd.DataFrame:
 def main():
     parser = argparse.ArgumentParser(description='Program to trim dead audio and add fades')
     parser.add_argument(
-        'path',
+        '--path',
         default = "/var/lib/robot",
         help = "Path to local root folder used for storing audio"
     )
     parser.add_argument(
-        'credentials',
+        '--credentials',
         default = "/etc/robot/cred.json",
         help = "Path to credentials file"
     )
