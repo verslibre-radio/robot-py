@@ -1,0 +1,7 @@
+lint.ignore = ["D", "E501", "COM"]
+lint.select = ["ALL"]
+lint.fixable = [ "I"]
+fix = true
+
+[lint.per-file-ignores]
+"__main__.py" = ["E731"]
