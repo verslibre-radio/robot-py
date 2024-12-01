@@ -1,18 +1,12 @@
 import argparse
 import os
 import shutil
+import sqlite3
 from pathlib import Path
 
-import gspread
-import pandas as pd
 from loguru import logger
 from pydub import AudioSegment
 from pydub.silence import detect_leading_silence
-
-from mixing.utils import get_filename, get_metadata
-
-SHEET_ID = "1j2w0MPDL0R9Z_9XE5G_luDo4PgPEWhf6RNhwbxh7lmw"
-SHEET_NAME = "meta"
 
 
 def trim_sound(
@@ -45,7 +39,7 @@ def trim_sound(
     src_path.unlink()
 
 
-def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None:
+def trimming(cursor: sqlite3.Cursor, src_audio_path: str, dst_audio_path: str) -> None:
     source_file_list = [f for f in os.listdir(src_audio_path) if not f.startswith(".")]
     if len(source_file_list) == 0:
         logger.info("No files to trim, exiting")
@@ -53,25 +47,27 @@ def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None
         for file_name in source_file_list:
             logger.info(f"Starting trimming sound for {file_name}")
 
-            tag = file_name.split("-", 2)[1]
-            date = file_name.split(" ", 2)[0]
+            file_name_tokens = file_name.split("_", 2)
+            date = file_name_tokens[0]
+            tag = file_name_tokens[1].split(".")[0]
 
-            df_active = df[df["tag"] == tag]
-            show_name, dj_name, ep_nr, genre = get_metadata(df_active)
-            dst_audio_filename = get_filename(tag, show_name, dj_name, ep_nr, date)
+            rows = cursor.execute(
+                "SELECT * FROM base_data where TAG = ?", (tag,)
+            ).fetchall()
+            show_data = rows[0]
+
+            dst_audio_filename = get_filename(
+                tag, show_data[1], show_data[3], show_data[2], date
+            )
 
             trim_sound(src_audio_path, file_name, dst_audio_path, dst_audio_filename)
 
         logger.info("Finished trimming stage")
 
 
-def get_sheet(cred_path: str) -> pd.DataFrame:
-    gc = gspread.service_account(filename=cred_path)
-    spreadsheet = gc.open_by_key(SHEET_ID)
-    worksheet = spreadsheet.worksheet(SHEET_NAME)
-    rows = worksheet.get_all_records()
-
-    return pd.DataFrame.from_dict(rows)
+def get_filename(tag: str, show_name: str, dj_name: str, ep_nr: str, date: str) -> str:
+    filename = f"{date}_{tag}_{show_name}_{ep_nr}_{dj_name}.mp3"
+    return filename.replace(" ", "_").replace("/", "")
 
 
 def main() -> None:
@@ -88,12 +84,16 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    df_data = get_sheet(args.credentials)
-    src_audio_path = Path(args.path) / "to_mix"
-    dst_audio_path = Path(args.path) / "to_upload"
+    base_path = Path(args.path)
+    src_audio_path = base_path / "to_mix"
+    dst_audio_path = base_path / "to_upload"
+    sql_path = base_path / "metadata.sql"
     dst_audio_path.mkdir(parents=True, exist_ok=True)
 
-    trimming(df_data, str(src_audio_path), str(dst_audio_path))
+    conn = sqlite3.connect(sql_path)
+    cursor = conn.cursor()
+
+    trimming(cursor, str(src_audio_path), str(dst_audio_path))
 
 
 if __name__ == "__main__":
