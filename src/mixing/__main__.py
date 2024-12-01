@@ -1,7 +1,6 @@
 import argparse
 import os
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 import gspread
@@ -10,13 +9,17 @@ from loguru import logger
 from pydub import AudioSegment
 from pydub.silence import detect_leading_silence
 
-from mixing.utils import add_metadata_to_mp3, get_filename, get_metadata
+from mixing.utils import get_filename, get_metadata
 
 SHEET_ID = "1j2w0MPDL0R9Z_9XE5G_luDo4PgPEWhf6RNhwbxh7lmw"
 SHEET_NAME = "meta"
 
+
 def trim_sound(
-        src_audio_path: str, src_audio_filename: str, dst_audio_path: str, dst_audio_filename: str,
+    src_audio_path: str,
+    src_audio_filename: str,
+    dst_audio_path: str,
+    dst_audio_filename: str,
 ) -> str:
     dst_path = Path(dst_audio_path) / Path(dst_audio_filename)
     src_path = Path(src_audio_path) / Path(src_audio_filename)
@@ -41,8 +44,6 @@ def trim_sound(
 
     src_path.unlink()
 
-    return str(dst_path)
-
 
 def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None:
     source_file_list = [f for f in os.listdir(src_audio_path) if not f.startswith(".")]
@@ -59,14 +60,7 @@ def trimming(df: pd.DataFrame, src_audio_path: str, dst_audio_path: str) -> None
             show_name, dj_name, ep_nr, genre = get_metadata(df_active)
             dst_audio_filename = get_filename(tag, show_name, dj_name, ep_nr, date)
 
-            dst_path = trim_sound(
-                src_audio_path, file_name, dst_audio_path, dst_audio_filename
-            )
-
-            date_rec = datetime.strptime(dst_audio_filename.split("_", 2)[0], "%Y%m%d") #noqa: DTZ007
-            add_metadata_to_mp3(
-                dst_path, show_name, dj_name, ep_nr, genre, date, date_rec.year
-            )
+            trim_sound(src_audio_path, file_name, dst_audio_path, dst_audio_filename)
 
         logger.info("Finished trimming stage")
 
