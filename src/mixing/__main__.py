@@ -67,7 +67,7 @@ def trimming(cursor: sqlite3.Cursor, src_audio_path: str, dst_audio_path: str) -
 
 def get_filename(tag: str, show_name: str, dj_name: str, ep_nr: str, date: str) -> str:
     filename = f"{date}_{tag}_{show_name}_{ep_nr}_{dj_name}.mp3"
-    return filename.replace(" ", "_").replace("/", "")
+    return filename.replace(" ", "_").replace("/", "").replace("&","and")
 
 
 def main() -> None:
